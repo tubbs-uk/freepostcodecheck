@@ -1,73 +1,56 @@
-from lxml import html
+from lxml import html, etree
 import requests
-from PIL import Image
-from io import BytesIO
-import pytesseract
 import sys
-import re
+import freeutil
 
-# uses 3rd party libraries: lxml, requests, PIL, pytesseract
+# uses 3rd party libraries: lxml, requests, PIL, pytesseract, cssselect
+
+# main draw resets once a day at 12 noon
+# bonus draw resets and appears once a day at 6pm till 12 midnight
+# stackpot draws refresh every 12 hours at 9am and 9pm
+
+# todo:
+# only email on match, error, or invalid postcode
+# split into separate invocations for draw types and times
+# sms on match
+# run in cloud
+# sign up with real email
+# run at at slightly diff times
 
 if len(sys.argv) != 3:
     print "usage: " + sys.argv[0] + " <postcode> <email>"
     sys.exit(1)
-
-def checkOk(response, errMsg):
-    if response.status_code != 200:
-        print "error: " + errMsg + ". status = " + str(response.status_code) + " reason = " + response.reason
-        sys.exit(1)
-
-def postcodeOk(postcode):
-    if ' ' not in postcode:
-        return (False, "no space")
-    if len(postcode) < 5 or len(postcode) > 8:
-        return (False, "wrong length")
-
-    outcode, incode = postcode.split(' ')
-    if len(outcode) < 2 or len(outcode) > 4:
-        return (False, "wrong length of outward code")
-    if len(incode) != 3:
-        return (False, "wrong length of outward code")
-
-    if not re.match(r'^([A-PR-UWYZ0-9][A-HK-Y0-9][AEHMNPRTVXY0-9]?[ABEHMNPRVWXY0-9]? {1,2}[0-9][ABD-HJLN-UW-Z]{2}|GIR 0AA)$', postcode.upper()):
-        return (False, "postcode not valid")
-    if not re.match(r'[a-zA-Z]{1,2}\d{1,2}', outcode) and not re.match(r'\d{1,2}[a-zA-Z]\d', outcode):
-        return (False, "outward code not valid")
-    if not re.match(r'\d[a-zA-Z][a-zA-Z]', incode):
-        return (False, "inward code not valid")
-
-    return True
 
 mypostcode = sys.argv[1]
 myemail = sys.argv[2]
 
 session = requests.Session()
 homePageResponse = session.get('http://freepostcodelottery.com')
-checkOk(homePageResponse, "failed to request homepage")
+freeutil.checkOk(homePageResponse, "failed to request homepage")
 
-# TODO sleep random number of seconds
+freeutil.randsleep()
 
+# main and bonus postcode draws
 loggedinpage = session.post('http://freepostcodelottery.com', data = {'register-ticket':mypostcode, 'register-email': myemail, 'login':''})
-checkOk(loggedinpage, "failed to login")
-tree = html.fromstring(loggedinpage.content)
+freeutil.checkOk(loggedinpage, "failed to login")
+maintree = html.fromstring(loggedinpage.content)
 
-postcodeImg = tree.xpath('//*[@id="main-results-container"]/div/div[2]/div[1]/img')
-if len(postcodeImg) == 0:
-    print "no winning postcode image found"
+postcodeImg = maintree.xpath('//*[@id="main-results-container"]/div/div[2]/div[1]/img')
+freeutil.checkPostcodeImage('main', session, postcodeImg)
+
+bonusPostcode = maintree.xpath('//*[@id="mini-draw"]/p[2]')
+freeutil.checkPostcodeString("bonus", bonusPostcode)
+
+# stackpot
+stackpage = session.get('http://freepostcodelottery.com/stackpot')
+freeutil.checkOk(stackpage, "failed to get stackpot page")
+stacktree = html.fromstring(stackpage.content)
+
+stackBoard = stacktree.cssselect('#middle > div.results-board')
+if not len(stackBoard):
+    print "no stackpot results board found"
 else:
-    imgSrc = postcodeImg[0].attrib.get('src')
-
-    imgData = session.get('http://freepostcodelottery.com' + imgSrc)
-    checkOk(imgData, "failed to get main winning postcode image")
-    winningPostcodeImg = Image.open(BytesIO(imgData.content))
-
-    winningPostcodeString = pytesseract.image_to_string(winningPostcodeImg)
-    print 'main draw postcode =', winningPostcodeString
-
-    print postcodeOk('st11 9tg')
-
-bonusPostcode = tree.xpath('//*[@id="mini-draw"]/p[2]')
-if len(bonusPostcode) == 0:
-    print "no bonus postcode found"
-else:
-    print 'bonus postcode =', bonusPostcode[0].text
+    si=1
+    for res in stackBoard[0].findall('.//span'):
+        freeutil.checkPostcodeString("stackpot"+str(si), [res])
+        si += 1
