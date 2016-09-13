@@ -69,3 +69,11 @@ def checkPostcodeString(type, textSrc):
         else:
             print type + " postcode not valid: " + msg
         return (codeOk, textSrc[0].text)
+
+def checkPostcodeMatch(myPostcode, checkPostcode):
+    myoutcode, myincode = myPostcode.split(' ')
+    choutcode, chincode = checkPostcode.split(' ')
+
+    if myoutcode.upper() == choutcode.upper():
+        return True
+    return False
