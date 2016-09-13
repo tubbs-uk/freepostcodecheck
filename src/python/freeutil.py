@@ -38,6 +38,7 @@ def randsleep():
 def checkPostcodeImage(type, session, imageSrc):
     if len(imageSrc) == 0:
         print "no " + type + " postcode image found"
+        return (False, "no postcode image")
     else:
         imgSrc = imageSrc[0].attrib.get('src')
 
@@ -53,10 +54,12 @@ def checkPostcodeImage(type, session, imageSrc):
             print type + " postcode is valid"
         else:
             print type + " postcode not valid: " + msg
+        return (codeOk, postcodeString)
 
 def checkPostcodeString(type, textSrc):
     if len(textSrc) == 0:
         print "no " + type + " postcode found"
+        return (False, "no postcode found")
     else:
         print type + " postcode = " + textSrc[0].text
 
@@ -65,3 +68,4 @@ def checkPostcodeString(type, textSrc):
             print type + " postcode is valid"
         else:
             print type + " postcode not valid: " + msg
+        return (codeOk, textSrc[0].text)

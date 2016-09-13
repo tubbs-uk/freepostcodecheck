@@ -2,6 +2,7 @@ from lxml import html, etree
 import requests
 import sys
 import freeutil
+from twilio.rest import TwilioRestClient
 
 # uses 3rd party libraries: lxml, requests, PIL, pytesseract, cssselect
 
@@ -14,15 +15,19 @@ import freeutil
 # split into separate invocations for draw types and times
 # sms on match
 # run in cloud
-# sign up with real email
+# sign up with real email - DONE
 # run at at slightly diff times
 
-if len(sys.argv) != 3:
-    print "usage: " + sys.argv[0] + " <postcode> <email>"
+if len(sys.argv) != 5:
+    print "usage: " + sys.argv[0] + " <postcode> <email> <twilio account sid> <twilio auth token>"
     sys.exit(1)
 
 mypostcode = sys.argv[1]
 myemail = sys.argv[2]
+twilioSid = sys.argv[3]
+twilioToken = sys.argv[4]
+
+smsclient = TwilioRestClient(twilioSid, twilioToken)
 
 session = requests.Session()
 homePageResponse = session.get('http://freepostcodelottery.com')
@@ -36,10 +41,10 @@ freeutil.checkOk(loggedinpage, "failed to login")
 maintree = html.fromstring(loggedinpage.content)
 
 postcodeImg = maintree.xpath('//*[@id="main-results-container"]/div/div[2]/div[1]/img')
-freeutil.checkPostcodeImage('main', session, postcodeImg)
+mainCodeOk, mainCode = freeutil.checkPostcodeImage('main', session, postcodeImg)
 
 bonusPostcode = maintree.xpath('//*[@id="mini-draw"]/p[2]')
-freeutil.checkPostcodeString("bonus", bonusPostcode)
+bonusOk, bonusCode = freeutil.checkPostcodeString("bonus", bonusPostcode)
 
 # stackpot
 stackpage = session.get('http://freepostcodelottery.com/stackpot')
@@ -54,3 +59,5 @@ else:
     for res in stackBoard[0].findall('.//span'):
         freeutil.checkPostcodeString("stackpot"+str(si), [res])
         si += 1
+
+message = smsclient.messages.create(to="+442033224536", from_="+442033224536", body="main " + mainCode + " bonus " + bonusCode)
