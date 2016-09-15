@@ -14,7 +14,7 @@ from twilio import TwilioRestException
 # todo:
 # only email on match, error, or invalid postcode
 # split into separate invocations for draw types and times
-# sms on match
+# sms on match or error - DONE
 # run in cloud
 # sign up with real email - DONE
 # run at at slightly diff times
