@@ -38,6 +38,9 @@ freeutil.checkOk(homePageResponse, "failed to request homepage")
 
 freeutil.randsleep()
 
+# go to quidco page to get entererd into draw
+session.get('http://freepostcodelottery.com/quidco/')
+
 # main and bonus postcode draws
 loggedinpage = session.post('http://freepostcodelottery.com', data = {'register-ticket':mypostcode, 'register-email': myemail, 'login':''})
 freeutil.checkOk(loggedinpage, "failed to login")
