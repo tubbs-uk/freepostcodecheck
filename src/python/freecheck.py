@@ -38,34 +38,46 @@ freeutil.checkOk(homePageResponse, "failed to request homepage")
 
 freeutil.randsleep()
 
-# go to quidco page to get entererd into draw
-session.get('http://freepostcodelottery.com/quidco/')
-
-# main and bonus postcode draws
+# main and mini bonus postcode draws
 loggedinpage = session.post('http://freepostcodelottery.com', data = {'register-ticket':mypostcode, 'register-email': myemail, 'login':''})
 freeutil.checkOk(loggedinpage, "failed to login")
 maintree = html.fromstring(loggedinpage.content)
 
-postcodeImg = maintree.xpath('//*[@id="main-results-container"]/div/div[2]/div[1]/img')
+postcodeImg = maintree.xpath('//*[@id="content"]/main/div[1]/div/div[1]/div[2]/div[1]/img')
 mainCodeOk, mainCode = freeutil.checkPostcodeImage('main', session, postcodeImg)
 
-bonusPostcode = maintree.xpath('//*[@id="mini-draw"]/p[2]')
-bonusOk, bonusCode = freeutil.checkPostcodeString("bonus", bonusPostcode)
+miniBonusPostcode = maintree.xpath('//*[@id="mini-draw"]/p[2]')
+miniBonusOk, miniBonusCode = freeutil.checkPostcodeString("minibonus", miniBonusPostcode)
+
+# go to quidco page to get entererd into draw
+session.get('http://freepostcodelottery.com/quidco/')
 
 # stackpot
 stackpage = session.get('http://freepostcodelottery.com/stackpot')
 freeutil.checkOk(stackpage, "failed to get stackpot page")
 stacktree = html.fromstring(stackpage.content)
 
-stackBoard = stacktree.cssselect('#middle > div.results-board')
+stackBoard = stacktree.cssselect('#content > main > div > div.col-competition > div.results-well.default-results-well.stackpot-results-well.full')
 stackResults = []
 if not len(stackBoard):
     print "no stackpot results board found"
 else:
     si=1
-    for res in stackBoard[0].findall('.//span'):
+    for res in stackBoard[0].findall(".//div[@class='postcode result-text']"):
         stackResults.append(freeutil.checkPostcodeString("stackpot"+str(si), [res]))
     si += 1
+
+# bonus page
+bonuspage = session.get('http://freepostcodelottery.com/your-bonus')
+freeutil.checkOk(bonuspage, "failed to get main bonus page")
+bonustree = html.fromstring(bonuspage.content)
+
+fivePoundBonusPostcode = bonustree.xpath('//*[@id="outer-container"]/div[1]/div[2]/div/aside/div[2]/div[1]/div[2]')
+fivePoundBonusOk, fivePoundBonusCode = freeutil.checkPostcodeString("five pound bonus", fivePoundBonusPostcode)
+
+tenPoundBonusPostcode = bonustree.xpath('//*[@id="outer-container"]/div[1]/div[2]/div/aside/div[3]/div[1]/div[2]')
+tenPoundBonusOk, tenPoundBonusCode = freeutil.checkPostcodeString("ten pound bonus", tenPoundBonusPostcode)
+
 
 smsMessage = ""
 if mainCodeOk:
@@ -74,11 +86,11 @@ if mainCodeOk:
 else:
     smsMessage += "invalid maincode " + mainCode
 
-if bonusOk:
-    if freeutil.checkPostcodeMatch(mypostcode, bonusCode):
-        smsMessage += " Match on bonuscode! " + bonusCode
+if miniBonusOk:
+    if freeutil.checkPostcodeMatch(mypostcode, miniBonusCode):
+        smsMessage += " Match on bonuscode! " + miniBonusCode
 else:
-    smsMessage += " invalid bonuscode " + bonusCode
+    smsMessage += " invalid bonuscode " + miniBonusCode
 
 sri = 1
 for sr in stackResults:
@@ -88,6 +100,18 @@ for sr in stackResults:
     else:
         smsMessage += " invalid stackpot code " + str(sri) + sr[1]
     sri += 1
+
+if fivePoundBonusOk:
+    if freeutil.checkPostcodeMatch(mypostcode, fivePoundBonusCode):
+        smsMessage += " Match on 5 pound bonuscode! " + fivePoundBonusCode
+else:
+    smsMessage += " invalid 5 pound bonuscode " + fivePoundBonusCode
+
+if tenPoundBonusOk:
+    if freeutil.checkPostcodeMatch(mypostcode, tenPoundBonusCode):
+        smsMessage += " Match on 10 pound bonuscode! " + tenPoundBonusCode
+else:
+    smsMessage += " invalid 10 pound bonuscode " + tenPoundBonusCode
 
 try:
     if smsMessage:

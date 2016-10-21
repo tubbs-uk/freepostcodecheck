@@ -57,18 +57,20 @@ def checkPostcodeImage(type, session, imageSrc):
         return (codeOk, postcodeString)
 
 def checkPostcodeString(type, textSrc):
+    postcodeStr = textSrc[0].text.replace('\n', '').strip()
+
     if len(textSrc) == 0:
         print "no " + type + " postcode found"
         return (False, "no postcode found")
     else:
-        print type + " postcode = " + textSrc[0].text
+        print type + " postcode = " + postcodeStr
 
-        codeOk, msg = postcodeOk(textSrc[0].text)
+        codeOk, msg = postcodeOk(postcodeStr)
         if codeOk:
             print type + " postcode is valid"
         else:
             print type + " postcode not valid: " + msg
-        return (codeOk, textSrc[0].text)
+        return (codeOk, postcodeStr)
 
 def checkPostcodeMatch(myPostcode, checkPostcode):
     myoutcode, myincode = myPostcode.split(' ')
